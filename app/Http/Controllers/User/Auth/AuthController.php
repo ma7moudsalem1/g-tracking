@@ -7,7 +7,7 @@ use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Traits\JwtTrait;
-use Laravel\Lumen\Routing\Controller as BaseController;
+use App\Http\Controllers\Controller as BaseController;
 
 class AuthController extends BaseController 
 {
@@ -25,20 +25,15 @@ class AuthController extends BaseController
         // Find the user by email
         $user = User::where('email', $this->request->input('email'))->first();
         if (!$user) {
-
-            return response()->json([
-                'error' => 'Email does not exist.'
-            ], 400);
+            return $this->responseFail('Email does not exist.');
         }
         // Verify the password and generate the token
         if (Hash::check($this->request->input('password'), $user->password)) {
-            return response()->json([
+            return $this->responseSuccess([
                 'token' => $this->jwt($user)
-            ], 200);
+            ], 'user logged in.');
         }
         // Bad Request response
-        return response()->json([
-            'error' => 'Email or password is wrong.'
-        ], 400);
+        return $this->responseFail('Email or password is wrong.');
     }
 }

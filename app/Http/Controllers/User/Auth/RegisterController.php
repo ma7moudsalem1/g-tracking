@@ -6,7 +6,7 @@ use Validator;
 use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Lumen\Routing\Controller as BaseController;
+use App\Http\Controllers\Controller as BaseController;
 use App\Traits\JwtTrait;
 
 class RegisterController extends BaseController 
@@ -34,9 +34,9 @@ class RegisterController extends BaseController
 
         $user = User::create($inputs);
         
-        return response()->json([
+        return $this->responseSuccess([
             'token' => $this->jwt($user)
-        ], 200);
+        ], 'user registered.');
     }
 
     private function inputReady(array $inputs)
@@ -49,7 +49,7 @@ class RegisterController extends BaseController
             unset($inputs['phone']);
         }
         $inputs['name']     = $request->input('first_name') . ' ' . $request->input('last_name');
-        $inputs['username'] = str_slug($inputs['name'], '_') . str_random(4);
+        $inputs['username'] = str_slug($inputs['name'], '_') . '_'. str_random(4);
         $inputs['password'] = Hash::make($inputs['password']);
         return $inputs;
     }

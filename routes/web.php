@@ -37,16 +37,12 @@ $router->group(['namespace' => 'User'], function () use ($router) {
        
         });
 
+        $router->group(['namespace' => 'Profile', 'prefix' => 'profile'], function() use ($router) {
+
+            $router->get('data', ['uses' => 'ProfileController@index', 'as' => 'profile.data']);
+       
+        });
+
     });
 
 });
-
-$router->group(
-    ['middleware' => 'jwt.auth'], 
-    function() use ($router) {
-        $router->get('users', function() {
-            $users = \App\User::all();
-            return response()->json($users);
-        });
-    }
-);

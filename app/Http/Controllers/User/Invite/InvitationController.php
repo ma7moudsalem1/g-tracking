@@ -10,7 +10,7 @@ use App\Models\UserInvitation;
 use App\Models\GroupInvitation;
 use App\Models\UserGroup;
 use Illuminate\Http\Request;
-use Laravel\Lumen\Routing\Controller as BaseController;
+use App\Http\Controllers\Controller as BaseController;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Database;
 use Kreait\Firebase;
@@ -68,16 +68,13 @@ class InvitationController extends BaseController {
     {
         $group = Group::where('id', $request->input('group'))->where('user_id', $request->auth->id)->first();
         if(!$group){
-            return response()->json([
-                'error' => 'the group id not valid.'
-            ], 400);
+            return $this->responseFail('The group id not valid.', $request->all());
         }
         
         if(UserInvitation::where('user_id', $request->input('user'))->where('group_id', $request->input('group'))->count()){
-            return response()->json([
-                'error' => 'You already invated this person before.'
-            ], 400);
+            return $this->responseErrors(['user' => 'You already invated this person before.'], $request->all());
         }
+
         $firebase = (new Factory)
         ->withServiceAccount(__DIR__ . '/gtracking-be02c-firebase-adminsdk-1f6i9-6aa811c257.json')
         ->create();
@@ -97,17 +94,14 @@ class InvitationController extends BaseController {
         $db->getReference()->update($updates);
         $data['dbkey'] = $newKey;
         UserInvitation::create($data);
-        
-        return response()->json(['success' => 'the invitation has been sent.']);
+        return $this->responseSuccess([], 'the invitation has been sent.');
     }
 
     public function acceptGroupInvitation(Request $request)
     {
         $Invitation = UserInvitation::where('user_id', $request->auth->id)->where('group_id', $request->input('group'))->first();
         if(!$Invitation){
-            return response()->json([
-                'error' => 'the invitation id is not valid.'
-            ], 400);
+            return $this->responseFail('The invitation id is not valid.', $request->all());
         }
 
         $firebase = (new Factory)
@@ -126,16 +120,14 @@ class InvitationController extends BaseController {
         ];
         $db->getReference()->update($updates);
         $Invitation->update(['status' => 1]);
-        return response()->json(['success' => 'the invitation has been accepted.']);
+        return $this->responseSuccess([], 'the invitation has been accepted.');
     }
 
     public function createGroupCodeForInvite(Request $request)
     {
         $group = Group::where('id', $request->input('group'))->where('user_id', $request->auth->id)->first();
         if(!$group){
-            return response()->json([
-                'error' => 'the group id not valid.'
-            ], 400);
+            return $this->responseFail('The group id not valid.', $request->all());
         }
 
         $exist = GroupInvitation::where('group_id', $request->input('group'))->first();
@@ -150,29 +142,25 @@ class InvitationController extends BaseController {
             ]);
         }
         
-        return response()->json(compact('invitation'), 200);
+        return $this->responseSuccess($invitation, 'invitation created successfully.');
     }
 
     public function AcceptGroupCodeForInvite(Request $request)
     {
         $invitation = GroupInvitation::where('slug', $request->input('code'))->first();
         if(!$invitation){
-            return response()->json([
-                'error' => 'the invitation code is not valid.'
-            ], 400);
+            return $this->responseFail('The invitation code is not valid.', $request->all());
         }
 
         $isExist = UserGroup::where('user_id', $request->auth->id)->where('group_id', $invitation->group_id)->count();
         if($isExist){
-            return response()->json([
-                'error' => 'You are already in this group.'
-            ], 400);
+            return $this->responseFail('You are already in this group.', $request->all());
         }
         UserGroup::create([
             'user_id'  => $request->auth->id,
             'group_id' => $invitation->group_id
         ]);
-        return response()->json(['success' => 'you are in this group now.'], 200);
+        return $this->responseSuccess([], 'you are in this group now.');
     }
 
 }
