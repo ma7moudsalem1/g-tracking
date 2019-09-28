@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User\Group;
 use Validator;
 use App\User;
 use App\Models\Employee;
+use App\Models\FavoriteGroup;
 use App\Models\Group;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller as BaseController;
@@ -14,7 +15,7 @@ class GroupController extends BaseController {
     public function index(Request $request)
     {
         $groups = $request->auth->isCompany ? $this->getCompanyGroups($request) : $request->auth->groups;
-        return $this->responseSuccess($groups, 'group showen successfully.');
+        return $this->responseSuccess(['groups' => $groups], 'group showen successfully.');
     }
 
     private function getCompanyGroups($request)
@@ -46,7 +47,7 @@ class GroupController extends BaseController {
             'limit'   => (int)$request->input('limit'),
             'user_id' => $auth->id
         ]);
-        return $this->responseSuccess($group, 'group added successfully.');
+        return $this->responseSuccess(['group' => $group], 'group added successfully.');
     }
 
     private function canAddMoreGroup($auth, $request)
@@ -78,7 +79,7 @@ class GroupController extends BaseController {
         if(!$group){
             return $this->responseFail('group doesn\'t exist.', $request->all());
         }
-        return $this->responseSuccess($group, 'group showen successfully.');
+        return $this->responseSuccess(['group' => $group], 'group showen successfully.');
     }
 
     public function update($id, Request $request)
@@ -96,7 +97,7 @@ class GroupController extends BaseController {
             return $this->responseErrors(['name' => 'Already group exists'], $request->all());
         }
         $group->update(['name' => $request->input('name')]);
-        return $this->responseSuccess($group, 'group updated successfully.');
+        return $this->responseSuccess(['group' => $group], 'group updated successfully.');
     }
 
     public function destroy($id, Request $request)
@@ -107,6 +108,30 @@ class GroupController extends BaseController {
         }
         $group->delete();
         return $this->responseSuccess([], 'group deleted successfully.');
+    }
+
+
+    public function addToFavorite($id, Request $request)
+    {
+        $group = Group::find($id);
+        $user  = $request->auth->id;
+        if(!$group){
+            return $this->responseFail('group doesn\'t exist.', $request->all());
+        }
+        $exist = FavoriteGroup::where('user_id', $user)->where('group_id', $id)->count();
+        if($exist){
+            return $this->responseFail('this group already in your list.', $request->all());
+        }
+        FavoriteGroup::create(['user_id' => $user, 'group_id' => $id]);
+        return $this->responseSuccess([], 'group added in your list successfully.');
+    }
+
+    public function getMyFavorites(Request $request)
+    {
+        $user = User::find($request->auth->id);
+        $favGroups = $user->favoriteGroups()->pluck('group_id');
+        $groups    = Group::whereIn('id', $favGroups)->get();
+        return $this->responseSuccess(['groups' => $groups], 'your list.');
     }
 
 }

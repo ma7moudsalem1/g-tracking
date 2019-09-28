@@ -11,9 +11,6 @@ use App\Models\GroupInvitation;
 use App\Models\UserGroup;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller as BaseController;
-use Kreait\Firebase\Factory;
-use Kreait\Firebase\Database;
-use Kreait\Firebase;
 
 class InvitationController extends BaseController {
 
@@ -27,41 +24,29 @@ class InvitationController extends BaseController {
         $request = $this->request;
         
         if(!$request->auth->isCompany){
-            return response()->json([
-                'error' => 'Your account does not have right role.'
-            ], 400);
+            return $this->responseFail('Your account does not have right role.', $request->all());
         }
 
         if(!$request->auth->company_status){
-            return response()->json([
-                'error' => 'you still can not send invite to the employees.'
-            ], 400);
+            return $this->responseFail('you still can not send invite to the employees.', $request->all());
         }
 
         $input = $request->input('employee');
         $employee = User::where('username', $input)->orWhere('email', $input)->orWhere('phone', $input)->first();
         if(!$employee){
-            return response()->json([
-                'error' => 'Employee does not exist.'
-            ], 400);
+            return $this->responseFail('Employee does not exist.', $request->all());
         }
         if($employee->isCompany){
-            return response()->json([
-                'error' => 'Not valid employee.'
-            ], 400);
+            return $this->responseFail('Not valid employee.', $request->all());
         }
 
         $inviteExist = Employee::where('company_id', $request->auth->id)->where('employee_id', $employee->id)->count();
         if($inviteExist){
-            return response()->json([
-                'error' => 'You already invated this employee before.'
-            ], 400);
+            return $this->responseFail('You already invated this employee before.', $request->all());
         }
 
         Employee::create(['company_id' => $request->auth->id, 'employee_id' => $employee->id]);
-        return response()->json([
-            'success' => 'invitation has been sent.'
-        ], 200);
+        return $this->responseSuccess([], 'the invitation has been sent.');
     }
 
     public function sendInvitationGroup(Request $request)
@@ -75,10 +60,6 @@ class InvitationController extends BaseController {
             return $this->responseErrors(['user' => 'You already invated this person before.'], $request->all());
         }
 
-        $firebase = (new Factory)
-        ->withServiceAccount(__DIR__ . '/gtracking-be02c-firebase-adminsdk-1f6i9-6aa811c257.json')
-        ->create();
-        $db = $firebase->getDatabase();
 
         $data = [
             'sender_id' => $request->auth->id,
@@ -87,11 +68,11 @@ class InvitationController extends BaseController {
             'status'    => 0
         ];
 
-        $newKey = $db->getReference('group_invitations')->push()->getKey();
+        $newKey = $this->firebaseCreate('group_invitations');
         $updates = [
             'group_invitations/'.$newKey => $data,
         ];
-        $db->getReference()->update($updates);
+        $this->firebaseUpdate($updates);
         $data['dbkey'] = $newKey;
         UserInvitation::create($data);
         return $this->responseSuccess([], 'the invitation has been sent.');
@@ -104,10 +85,6 @@ class InvitationController extends BaseController {
             return $this->responseFail('The invitation id is not valid.', $request->all());
         }
 
-        $firebase = (new Factory)
-        ->withServiceAccount(__DIR__ . '/gtracking-be02c-firebase-adminsdk-1f6i9-6aa811c257.json')
-        ->create();
-        $db = $firebase->getDatabase();
         $data = [
             'sender_id' => $Invitation->sender_id,
             'user_id'   => $request->auth->id,
@@ -118,7 +95,7 @@ class InvitationController extends BaseController {
         $updates = [
             'group_invitations/'.$Invitation->dbkey => $data,
         ];
-        $db->getReference()->update($updates);
+        $this->firebaseUpdate($updates);
         $Invitation->update(['status' => 1]);
         return $this->responseSuccess([], 'the invitation has been accepted.');
     }
