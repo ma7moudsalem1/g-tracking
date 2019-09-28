@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Group extends Model
+class UserLocation extends Model
 {
     protected $guarded = [];
 
-    public function userGroup()
+    public function user()
     {
-        return $this->hasMany('App\Models\UserGroup');
+        return $this->belongsTo('App\User');
     }
 }

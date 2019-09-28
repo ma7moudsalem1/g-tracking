@@ -4,9 +4,10 @@ namespace App\Http\Controllers\User\Auth;
 
 use Validator;
 use App\User;
+use App\Models\UserLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Lumen\Routing\Controller as BaseController;
+use App\Http\Controllers\Controller as BaseController;
 use App\Traits\JwtTrait;
 
 class RegisterController extends BaseController 
@@ -25,18 +26,30 @@ class RegisterController extends BaseController
             'first_name'     => 'required|string|min:3|max:21',
             'last_name'      => 'required|string|min:3|max:21',
             'email'          => 'required|email|unique:users',
-            'phone'          => 'nullable|numaric|unique:users',
+            'phone'          => 'nullable|unique:users',
             'password'       => 'required|min:6|max:20',
-            'company'        => 'nullable|boolean',
+            'company'        => 'nullable',
         ]);
         
         $inputs = $this->inputReady($inputs);
 
         $user = User::create($inputs);
-        
-        return response()->json([
+        $newKey = $this->firebaseCreate('user_locations');
+        $data = [
+            'user_id'   => $user->id,
+            'lng'       => '',
+            'lat'       => ''
+        ];
+        $updates = [
+            'user_locations/'.$newKey => $data
+        ];
+
+        $this->firebaseUpdate($updates);
+        $data['dbkey'] = $newKey;
+        UserLocation::create($data);
+        return $this->responseSuccess([
             'token' => $this->jwt($user)
-        ], 200);
+        ], 'user registered successfully.');
     }
 
     private function inputReady(array $inputs)
@@ -49,8 +62,8 @@ class RegisterController extends BaseController
             unset($inputs['phone']);
         }
         $inputs['name']     = $request->input('first_name') . ' ' . $request->input('last_name');
-        $inputs['username'] = str_slug($inputs['name'], '_') . str_random(4);
-        $inputs['password'] = Hash::make($inputs['password']);
+        $inputs['username'] = str_slug($inputs['name'], '_') . '_'. str_random(4);
+        $inputs['password'] = $inputs['password'];
         return $inputs;
     }
 }

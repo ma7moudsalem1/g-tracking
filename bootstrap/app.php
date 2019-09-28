@@ -25,6 +25,8 @@ $app->withFacades();
 
 $app->withEloquent();
 
+$app->instance('path.config', app()->basePath() . DIRECTORY_SEPARATOR . 'config');
+
 /*
 |--------------------------------------------------------------------------
 | Register Container Bindings

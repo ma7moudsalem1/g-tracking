@@ -7,6 +7,7 @@ use Laravel\Lumen\Auth\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Model implements AuthenticatableContract, AuthorizableContract
 {
@@ -18,7 +19,7 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'username', 'phone', 'isCompany', 'company_status'
+        'name', 'email', 'password', 'username', 'phone', 'isCompany', 'company_status', 'avatar'
     ];
     protected $with = ['groups'];
 
@@ -31,8 +32,23 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         'password',
     ];
 
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = Hash::make($value);
+    }
+
     public function groups()
     {
         return $this->hasMany('App\Models\Group');
+    }
+
+    public function favoriteGroups()
+    {
+        return $this->hasMany('App\Models\FavoriteGroup');
+    }
+
+    public function location()
+    {
+        return $this->hasOne('App\Models\UserLocation');
     }
 }
